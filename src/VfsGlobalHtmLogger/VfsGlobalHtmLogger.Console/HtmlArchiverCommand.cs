@@ -29,8 +29,9 @@ namespace VfsGlobalHtmLogger.Console
         {
             await _browser.GetCookieManager().DeleteCookiesAsync();
             _logger.LogInformation("Start loading page {0}", args.ArchiveUrl);
-            await _browser.LoadUrlAsync(args.ArchiveUrl);
-
+            var response = await _browser.LoadUrlAsync(args.ArchiveUrl);
+            _logger.LogInformation("Finish loading. Status code {0}", response.HttpStatusCode);
+            _browser.Stop();
             var now = DateTime.Now;
             await WriteDocument(now, cancellationToken);
             ClearFolder(now - args.ArchiveCapacityTimeSpan);
@@ -80,8 +81,21 @@ namespace VfsGlobalHtmLogger.Console
 
         private async Task WriteHead(XmlWriter xmlWriter, CancellationToken cancellationToken)
         {
+            var script = @"(function () {
+                var lastUpdatedEl = document.getElementById(
+                        'last-updated'
+                      );
+                if(!lastUpdatedEl) {
+                    return document.title;
+                }
+                var waitTimeEl = document.getElementsByTagName('h2')[0];
+                var title = lastUpdatedEl.innerText + ' ' + waitTimeEl.innerText.replace('Your estimated wait time is', '');
+                return title;
+            })();";
+            var scriptResponse = await _browser.EvaluateScriptAsync(script);
+
             var header = new XElement("head",
-                new XElement("title", _browser.Address),
+                new XElement("title", scriptResponse.Result),
                 new XElement("style", Styles.Acrhive),
                 new XElement("script", Scripts.Acrhive)
             );

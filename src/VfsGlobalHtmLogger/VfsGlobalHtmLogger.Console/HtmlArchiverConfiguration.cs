@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace VfsGlobalHtmLogger.Console
+﻿namespace VfsGlobalHtmLogger.Console
 {
     public record HtmlArchiverConfiguration
     {
-        public string[] Urls { get; set; } = Array.Empty<string>();
+        public string Url { get; set; }
         public int PullIntervalMinutes { get; set; }
         public int ArchiveCapacityHours { get; set; }
 

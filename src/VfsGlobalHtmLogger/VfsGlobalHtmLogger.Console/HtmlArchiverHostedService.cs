@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,8 +31,8 @@ namespace VfsGlobalHtmLogger.Console
             _logger.LogInformation("Log options {0}", configuration);
 
             var archiveCapacity = TimeSpan.FromHours(configuration.ArchiveCapacityHours);
-            await Task.WhenAll(configuration.Urls.Select(url => _htmlArchiverCommand.Archive(new HtmlArchiverArgs(url, archiveCapacity), stoppingToken)));
 
+            await _htmlArchiverCommand.Archive(new HtmlArchiverArgs(configuration.Url, archiveCapacity), stoppingToken);
         }
     }
 }

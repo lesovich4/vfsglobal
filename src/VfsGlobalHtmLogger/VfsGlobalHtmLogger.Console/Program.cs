@@ -6,9 +6,8 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
 using VfsGlobalHtmLogger.Console;
+using VfsGlobalHtmLogger.Console.Handlers;
 
 class Program
 {
@@ -23,6 +22,24 @@ class Program
             return exitCode;
         }
 
+        using var host = Host.CreateDefaultBuilder(args)
+            .ConfigureServices((context, services) =>
+            {
+                services.AddTransient<LoggingRequestHandler>();
+                services.AddTransient<LoggingResourceRequestHandler>();
+                services.AddTransient(sp =>
+                {
+                    var browser = new ChromiumWebBrowser();
+                    browser.RequestHandler = sp.GetRequiredService<LoggingRequestHandler>();
+                    return browser;
+                });
+                services.AddTransient<HtmlArchiverCommand>();
+                services.Configure<HtmlArchiverConfiguration>(context.Configuration.GetSection("HtmlArchiver"));
+                services.AddHostedService<HtmlArchiverHostedService>();
+            })
+            .Build();
+        
+
         var settings = new CefSettings()
         {
             CachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CefSharp\\Cache"),
@@ -30,15 +47,6 @@ class Program
         };
         Cef.Initialize(settings, performDependencyCheck: false);
 
-        using var host = Host.CreateDefaultBuilder(args)
-            .ConfigureServices((context, services) =>
-            {
-                services.AddTransient<ChromiumWebBrowser>();
-                services.AddTransient<HtmlArchiverCommand>();
-                services.Configure<HtmlArchiverConfiguration>(context.Configuration.GetSection("HtmlArchiver"));
-                services.AddHostedService<HtmlArchiverHostedService>();
-            })
-            .Build();
         host.Run();
         Cef.Shutdown();
 
