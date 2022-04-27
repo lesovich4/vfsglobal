@@ -58,7 +58,7 @@ namespace VfsGlobalHtmLogger.Console
             var folder = EnsureFolder(time, _browser.Address);
 
             var name = await GetName();
-            var fileName = GetFileName(time, $"{name}.html");
+            var fileName = GetFileName(time, $"({name}).html");
             var filePath = Path.Combine(folder, fileName);
             using var file = File.OpenWrite(filePath);
             using var xmlWriter = XmlWriter.Create(file, new XmlWriterSettings { Async = true });
@@ -113,7 +113,7 @@ namespace VfsGlobalHtmLogger.Console
                 return fileName
             })();";
             var scriptResponse = await _browser.EvaluateScriptAsync(script);
-            return scriptResponse.Result.ToString();
+            return scriptResponse.Result.ToString()?.Trim();
         }
 
         private async Task WriteHead(XmlWriter xmlWriter, CancellationToken cancellationToken)
@@ -202,15 +202,20 @@ namespace VfsGlobalHtmLogger.Console
 
         private static readonly Regex InvalidCharsRegex =
             new(string.Format("[{0}]", Regex.Escape(new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars()))));
+        private static string NormalizeFSName(string name)
+        {
+            var normalizedName = InvalidCharsRegex.Replace(name, "_");
+            return normalizedName;
+        }
         private string GetFolder(DateTime dateTime, string address)
         {
             var uriPath = new UriBuilder(address).Path;
             var fileName = Path.GetFileName(uriPath);
-            var folderName = InvalidCharsRegex.Replace(fileName, "_");
+            var folderName = NormalizeFSName(fileName);
             return Path.GetFullPath($"./{folderName}");
         }
 
         private string GetFileName(DateTime dateTime, string name) =>
-            $"{dateTime:yyyy-MM-ddTHH_mm_ss}_{name}";
+            $"{dateTime:yyyy-MM-ddTHH_mm_ss}_{NormalizeFSName(name)}";
     }
 }
