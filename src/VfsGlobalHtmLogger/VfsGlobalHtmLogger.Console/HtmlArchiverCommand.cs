@@ -57,7 +57,8 @@ namespace VfsGlobalHtmLogger.Console
         {
             var folder = EnsureFolder(time, _browser.Address);
 
-            var fileName = GetFileName(time, "archive.html");
+            var name = await GetName();
+            var fileName = GetFileName(time, $"{name}.html");
             var filePath = Path.Combine(folder, fileName);
             using var file = File.OpenWrite(filePath);
             using var xmlWriter = XmlWriter.Create(file, new XmlWriterSettings { Async = true });
@@ -79,8 +80,9 @@ namespace VfsGlobalHtmLogger.Console
             return folder;
         }
 
-        private async Task WriteHead(XmlWriter xmlWriter, CancellationToken cancellationToken)
+        private async Task<string> GetDocumentTitle()
         {
+
             var script = @"(function () {
                 var lastUpdatedEl = document.getElementById(
                         'last-updated'
@@ -93,9 +95,33 @@ namespace VfsGlobalHtmLogger.Console
                 return title;
             })();";
             var scriptResponse = await _browser.EvaluateScriptAsync(script);
+            return scriptResponse.Result.ToString();
+        }
+
+        private async Task<string> GetName()
+        {
+
+            var script = @"(function () {
+                var lastUpdatedEl = document.getElementById(
+                        'last-updated'
+                      );
+                if(!lastUpdatedEl) {
+                    return 'archive';
+                }
+                var waitTimeEl = document.getElementsByTagName('h2')[0];
+                var fileName = waitTimeEl.innerText.replace('Your estimated wait time is', '');
+                return fileName
+            })();";
+            var scriptResponse = await _browser.EvaluateScriptAsync(script);
+            return scriptResponse.Result.ToString();
+        }
+
+        private async Task WriteHead(XmlWriter xmlWriter, CancellationToken cancellationToken)
+        {
+            var title = await GetDocumentTitle();
 
             var header = new XElement("head",
-                new XElement("title", scriptResponse.Result),
+                new XElement("title", title),
                 new XElement("style", Styles.Acrhive),
                 new XElement("script", Scripts.Acrhive)
             );
